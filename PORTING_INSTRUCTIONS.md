@@ -183,12 +183,6 @@ Parameter control methods (all normalized `0..1`):
 
 Rebuild universal mac binaries and verify with `lipo -info`.
 
-### Sounds wrong or same as another plugin
-
-- Confirm the plugin class mapping in `PLUGIN_SPECS`
-- Re-run generator
-- Rebuild
-- Ensure Max is loading the latest copied bundle (not an older duplicate in search path)
 
 ### Build fails with Max SDK error
 
@@ -196,4 +190,65 @@ Check `MAX_SDK_BASE_DIR` points to the folder containing:
 
 ```text
 script/max-pretarget.cmake
+```
+
+## 11. Port a New Device (Checklist)
+
+Use this exact flow when you want to port another Airwindows plugin.
+
+1. Confirm source files exist:
+`plugins/LinuxVST/src/<PluginName>/<PluginName>.h`
+`plugins/LinuxVST/src/<PluginName>/<PluginName>.cpp`
+`plugins/LinuxVST/src/<PluginName>/<PluginName>Proc.cpp`
+
+2. Pick the Max external name:
+- format: `airfx.<name>~`
+- example: `airfx.fromtape~`
+
+3. Add plugin mapping in:
+`/Users/jokubaspreiksa/Music/airwindows/max_external/scripts/generate_console7_family.py`
+- add one `PLUGIN_SPECS` line:
+```python
+PluginSpec("<PluginName>", "airfx.<name>~"),
+```
+
+4. Generate only that plugin first:
+```bash
+cd /Users/jokubaspreiksa/Music/airwindows/max_external
+python3 scripts/generate_console7_family.py --only <PluginName>
+```
+
+5. Build and test it (mac + windows):
+```bash
+export MAX_SDK_BASE_DIR=/Users/jokubaspreiksa/workspace/max-sdk/source/max-sdk-base
+cd /Users/jokubaspreiksa/Music/airwindows/max_external
+./scripts/build_console7_externals.sh --platform both
+```
+
+6. Verify artifacts exist:
+```bash
+find /Users/jokubaspreiksa/Music/airwindows/max_external/externals -maxdepth 1 \
+  \( -name 'airfx.<name>~.mxo' -o -name 'airfx.<name>~.mxe64' \)
+```
+
+7. Verify parameter mapping in Max:
+- instantiate object `airfx.<name>~`
+- send message: `params`
+- test controls using:
+  - `param 1 0.5`
+  - `param <symbol> 0.5`
+  - `@<symbol> 0.5`
+
+8. Install the `.mxo` to Max externals and restart Max:
+```bash
+mkdir -p "$HOME/Documents/Max 9/Library/externals"
+cp -R /Users/jokubaspreiksa/Music/airwindows/max_external/externals/airfx.<name>~.mxo \
+  "$HOME/Documents/Max 9/Library/externals/"
+```
+
+9. If all good, regenerate all targets:
+```bash
+cd /Users/jokubaspreiksa/Music/airwindows/max_external
+python3 scripts/generate_console7_family.py
+./scripts/build_console7_externals.sh --platform both
 ```
